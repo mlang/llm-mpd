@@ -7,7 +7,7 @@ from typing import BinaryIO, Generator
 
 
 from click import command, option
-import ffmpeg
+import ffmpeg # type: ignore
 from llm import get_key, get_model, hookimpl, Attachment, Template
 from mpd import MPDClient # type: ignore
 from mpd.base import CommandError # type: ignore
@@ -23,11 +23,9 @@ def register_template_loaders(register):
     register("mpd", mpd_template_loader)
 
 def mpd_template_loader(name: str) -> Template:
-    return Template(name=name, **TEMPLATE[name])
-
-TEMPLATE: dict[str, dict[str, str | dict[str, str]]] = {
-    'default': {
-        'system': """\
+    if name == 'default':
+        return Template(name=name,
+            system="""\
 Your name is $name. You are a moderator working with $station, a local radio station received in $location, $region.
 You are good with words. Puns, rhymes and playing with words is one of your specialties.
 
@@ -36,24 +34,24 @@ Present the upcoming song.  If you are being shown the coverart of the next song
 If you know about the artist or label, also add information about them to your song introduction.
 If you can acquire information about the local environment, like weather or celestial events, make them a part of your moderation, but be brief about it.
 
-
 Your native tongue is $language which is also what your audience knows best.
 """,
-        'defaults': {
-            'name': 'Nova',
-            'station': 'Radio Mario',
-            'location': 'Graz',
-            'region': 'Austria',
-            'language': 'austrian german'
-        },
-        'prompt': """\
+            defaults=dict(
+                namer='Nova',
+                station='Radio Mario',
+                location='Graz',
+                region='Austria',
+                language='austrian german'
+            ),
+            prompt="""\
 Date: $date
 Previous: $prev
 Next: $input
 """,
-        'model': "o4-mini"
-    }
-}
+            model="o4-mini"
+        )
+
+    raise RuntimeError("Unknown template")
 
 
 @command()
