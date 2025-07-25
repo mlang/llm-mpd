@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
 from sys import exit, stderr
@@ -55,11 +56,7 @@ Next: $input
 
 @command()
 @option('-t', '--template', default='mpd:default', show_default=True)
-@click.option(
-    "-p",
-    "--param",
-    multiple=True,
-    type=(str, str),
+@click.option("-p", "--param", multiple=True, type=(str, str),
     help="Parameters for template"
 )
 @option('--tts-model', default='gpt-4o-mini-tts', show_default=True,
@@ -73,12 +70,13 @@ Next: $input
 )
 @option('--audio-format', default='flac', show_default=True)
 @option('--mpd-socket', default='/run/mpd/socket', show_default=True)
-@option('--clips-directory',
-    help="Directory relative to MPD music directory to store speech clips in",
-    required=True
+@option('--clips-directory', required=True,
+    help="Directory relative to MPD music directory to store speech clips in"
 )
 @option('tools', '-T', '--tool', multiple=True)
-@option('-a', '--always', help="Announce every song, not just those with album art", is_flag=True)
+@option('-a', '--always', is_flag=True
+    help="Announce every song, not just those with album art"
+)
 def mpd_cmd(*,
     template, param,
     tts_model, tts_voice, tts_api_key, audio_format,
@@ -148,6 +146,7 @@ def mpd_cmd(*,
                         tools=tools,
                         stream=False
                     ).text()
+
                     filename = music_directory / clips_directory / f'{date.strftime("%Y%m%dT%H%M%S")}.{audio_format}'
                     with speech.with_streaming_response.create(
                         input=announcement,
@@ -155,10 +154,12 @@ def mpd_cmd(*,
                         voice=tts_voice,
                         response_format=audio_format
                     ) as audio:
-                        adjust_and_stream_to_file(audio,
+                        with adjust_and_stream_to_file(
                             format=audio_format, padding=padding,
                             filename=filename
-                        )
+                        ) as processor:
+                            for chunk in audio.iter_bytes(4096):
+                                processor.write(chunk)
 
                     clip = filename.relative_to(music_directory)
                     job = mpd.update(str(clip))
@@ -193,7 +194,8 @@ def rolling_and_enough_time(status, seconds):
             return remaining
 
 
-def adjust_and_stream_to_file(response, format: str, padding: int, filename: Path):
+@contextmanager
+def adjust_and_stream_to_file(format: str, padding: int, filename: Path):
     proc = ffmpeg.input(
         "pipe:", f=format
     ).filter(
@@ -207,10 +209,13 @@ def adjust_and_stream_to_file(response, format: str, padding: int, filename: Pat
     ).run_async(
         pipe_stdin=True, quiet=True, overwrite_output=True
     )
-    for chunk in response.iter_bytes(4096):
-        proc.stdin.write(chunk)
-    proc.stdin.close()
-    proc.wait()
+
+    try:
+        yield proc.stdin
+
+    finally:
+        proc.stdin.close()
+        proc.wait()
     
 
 def get_attachments(mpd, file) -> list[Attachment]:
