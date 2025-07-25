@@ -3,12 +3,14 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from sys import exit, stderr
 from time import sleep
+from typing import BinaryIO, Generator
+
 
 from click import command, option
 import ffmpeg
 from llm import get_key, get_model, hookimpl, Attachment, Template
-from mpd import MPDClient
-from mpd.base import CommandError
+from mpd import MPDClient # type: ignore
+from mpd.base import CommandError # type: ignore
 from openai import OpenAI
 
 
@@ -23,7 +25,7 @@ def register_template_loaders(register):
 def mpd_template_loader(name: str) -> Template:
     return Template(name=name, **TEMPLATE[name])
 
-TEMPLATE = {
+TEMPLATE: dict[str, dict[str, str | dict[str, str]]] = {
     'default': {
         'system': """\
 Your name is $name. You are a moderator working with $station, a local radio station received in $location, $region.
@@ -56,7 +58,7 @@ Next: $input
 
 @command()
 @option('-t', '--template', default='mpd:default', show_default=True)
-@click.option("-p", "--param", multiple=True, type=(str, str),
+@option("-p", "--param", multiple=True, type=(str, str),
     help="Parameters for template"
 )
 @option('--tts-model', default='gpt-4o-mini-tts', show_default=True,
@@ -74,7 +76,7 @@ Next: $input
     help="Directory relative to MPD music directory to store speech clips in"
 )
 @option('tools', '-T', '--tool', multiple=True)
-@option('-a', '--always', is_flag=True
+@option('-a', '--always', is_flag=True,
     help="Announce every song, not just those with album art"
 )
 def mpd_cmd(*,
@@ -195,7 +197,9 @@ def rolling_and_enough_time(status, seconds):
 
 
 @contextmanager
-def adjust_and_stream_to_file(format: str, padding: int, filename: Path):
+def adjust_and_stream_to_file(
+    format: str, padding: int, filename: Path
+) -> Generator[BinaryIO, None, None]:
     proc = ffmpeg.input(
         "pipe:", f=format
     ).filter(
