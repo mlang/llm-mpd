@@ -119,7 +119,6 @@ def mpd_cmd(*,
 
 
     openai = OpenAI(api_key=get_key(tts_api_key, 'openai', 'OPENAI_API_KEY'))
-    speech = openai.audio.speech
 
     while True:
         status = mpd.status()
@@ -150,18 +149,18 @@ def mpd_cmd(*,
                     ).text()
 
                     filename = music_directory / clips_directory / f'{date.strftime("%Y%m%dT%H%M%S")}.{audio_format}'
-                    with speech.with_streaming_response.create(
+                    with openai.audio.speech.with_streaming_response.create(
                         input=announcement,
                         model=tts_model,
                         voice=tts_voice,
                         response_format=audio_format
-                    ) as audio:
+                    ) as response:
                         with adjust_and_stream_to_file(
                             format=audio_format, padding=padding,
                             filename=filename
-                        ) as processor:
-                            for chunk in audio.iter_bytes(4096):
-                                processor.write(chunk)
+                        ) as pipe:
+                            for chunk in response.iter_bytes(4096):
+                                pipe.write(chunk)
 
                     clip = filename.relative_to(music_directory)
                     job = mpd.update(str(clip))
