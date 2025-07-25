@@ -57,9 +57,14 @@ Next: $input
 
 
 @command()
-@option('-t', '--template', default='mpd:default', show_default=True)
+@option('-t', '--template', default='mpd:default', show_default=True,
+    help="Template to use"
+)
 @option("-p", "--param", multiple=True, type=(str, str),
     help="Parameters for template"
+)
+@option('tools', '-T', '--tool', multiple=True,
+    help="Tools to make available to the model"
 )
 @option('--tts-model', default='gpt-4o-mini-tts', show_default=True,
     help="OpenAI TTS model to use"
@@ -75,15 +80,13 @@ Next: $input
 @option('--clips-directory', required=True,
     help="Directory relative to MPD music directory to store speech clips in"
 )
-@option('tools', '-T', '--tool', multiple=True)
 @option('-a', '--always', is_flag=True,
     help="Announce every song, not just those with album art"
 )
 def mpd_cmd(*,
-    template, param,
+    template, param, tools,
     tts_model, tts_voice, tts_api_key, audio_format,
     mpd_socket, clips_directory,
-    tools,
     always
 ):
     """A moderator for Music Player Daemon."""
@@ -140,7 +143,6 @@ def mpd_cmd(*,
                     )
                     if len(conversation.responses) > 20:
                         conversation = model.conversation(tools=tools)
-
                     announcement = conversation.chain(prompt,
                         system=system,
                         attachments=attachments,
