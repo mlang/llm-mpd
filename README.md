@@ -1,13 +1,13 @@
 # llm-mpd
 
-> AI-powered narrator for Music Player Daemon (MPD)
+> Narrator for Music Player Daemon (MPD)
 
-`llm-mpd` collects details about the current and upcoming tracks—album-art images included—sends them to an LLM to craft a spoken introduction, synthesizes the narration with OpenAI TTS, and inserts the resulting audio clip into your MPD playlist so it plays between songs.
+`llm-mpd` collects details about the current and upcoming tracks, sends them to an LLM to craft a spoken introduction, synthesizes the narration with OpenAI TTS, and inserts the resulting audio clip into your MPD playlist so it plays between songs.
 
 ## Features
 - Automatically generated, voice-acted narrations between tracks  
 - Vision support: album-art descriptions incorporated into the script  
-- Works with random mode and adds padding for crossfade
+- Works with random mode and adds padding to accomodate for crossfade
 - Tool calling (e.g. local weather) for timely shout-outs  
 - Fully configurable through [LLM templates](https://llm.datasette.io/en/stable/templates.html) and CLI flags
 
@@ -34,9 +34,9 @@ llm install git+https://github.com/mlang/llm-mpd
    mkdir -p /music/openai-speech
    chown mpd:mpd /music/openai-speech   # adjust user/group if needed
    ```
-2. Export your OpenAI key (or pass it with `--tts-api-key`):  
+2. Set your OpenAI key (or pass it with `--tts-api-key`):  
    ```bash
-   export OPENAI_API_KEY=sk-…
+   llm keys set openai
    ```
 
 ## Usage
