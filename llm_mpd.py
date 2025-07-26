@@ -37,7 +37,7 @@ If you can acquire information about the local environment, like weather or cele
 Your native tongue is $language which is also what your audience knows best.
 """,
             defaults=dict(
-                namer='Nova',
+                name='Nova',
                 station='Radio Mario',
                 location='Graz',
                 region='Austria',

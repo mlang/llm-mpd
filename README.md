@@ -1,58 +1,99 @@
 # llm-mpd
 
-LLM Presenter/Moderator for Music Player Daemon.
+> AI-powered narrator for Music Player Daemon (MPD)
+
+`llm-mpd` collects details about the current and upcoming tracks—album-art images included—sends them to an LLM to craft a spoken introduction, synthesizes the narration with OpenAI TTS, and inserts the resulting audio clip into your MPD playlist so it plays between songs.
+
+## Features
+- Automatically generated, voice-acted narrations between tracks  
+- Vision support: album-art descriptions incorporated into the script  
+- Works with random mode and adds padding for crossfade
+- Tool calling (e.g. local weather) for timely shout-outs  
+- Fully configurable through [LLM templates](https://llm.datasette.io/en/stable/templates.html) and CLI flags
 
 ## Installation
 
+Prerequisites  
+* Python ≥ 3.9  
+* Running MPD server with write access to its `music_directory`  
+* `ffmpeg` available on your `$PATH`  
+* OpenAI API key (for TTS)
+
 ```bash
+# Install the core LLM framework
+pipx install llm
+
+# Install this plugin
 llm install git+https://github.com/mlang/llm-mpd
 ```
 
 ## Setup
 
-`llm mpd` should be run on the same machine as your MPD server. This is required because it must be able to write to a folder inside your `music_directory`. This folder is called `clips-directory` and needs to be manually created before running `llm mpd`.
-
-You also need to make sure the user you are planning to run `llm mpd` as has write access to the `clips-directory`.
-
-Here's how you can create the directory:
-
-```bash
-mkdir /music/openai-speech
-```
+1. Create a writable sub-directory inside your MPD music directory, for example:  
+   ```bash
+   mkdir -p /music/openai-speech
+   chown mpd:mpd /music/openai-speech   # adjust user/group if needed
+   ```
+2. Export your OpenAI key (or pass it with `--tts-api-key`):  
+   ```bash
+   export OPENAI_API_KEY=sk-…
+   ```
 
 ## Usage
 
-Run the following command to start `llm mpd`:
+Start the narrator:
 
 ```bash
 llm mpd --clips-directory openai-speech
 ```
 
-### Customization
+Common options:
 
-`llm mpd` uses [LLM Templates](https://llm.datasette.io/en/stable/templates.html) to define the instructions for the moderator.
+| Flag | Default | Purpose |
+|------|---------|---------|
+| `--template` | `mpd:default` | Select an LLM template |
+| `--param KEY VALUE` | – | Override template variables |
+| `--tool` | – | Expose an LLM tool (e.g. weather) |
+| `--tts-model` | `gpt-4o-mini-tts` | OpenAI TTS model |
+| `--always` | off | Announce every song, not just those with art |
 
-The default template provides a number of parameters to customize:
+Run `llm mpd --help` for the full list.
+
+## Customisation
+
+Templates live in the LLM template system.  
+The bundled `mpd:default` template supports:
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| name      | Nova    | The on-air name/persona the model should adopt |
-| station   | Radio Mario | Name of the radio station being presented |
-| location  | Graz    | City or locality of the listeners |
-| region    | Austria | Wider region/country of the listeners |
-| language  | Austrian German | Language the moderator should speak |
+| `name`    | Nova    | On-air persona |
+| `station` | Radio Mario | Station name |
+| `location`| Graz    | Listener city |
+| `region`  | Austria | Listener region |
+| `language`| Austrian German | Language to speak |
 
+Override any of these:
 
-If you'd like to customize the system prompt or default model,
-write your own template file and specify the template name when starting `llm mpd`.
-Custom templates should make use of the variables `$date`, `$prev` and `$input`.
-`$input` will contain information about the upcoming song.
+```bash
+llm mpd \
+  --clips-directory openai-speech \
+  --param name DJ-Wanda \
+  --param language "Canadian French"
+```
 
-### Suggested Plugins
+## Suggested Plugins
 
-`llm mpd` supports tools. For instance, if you'd like your moderator to be able to query the weather at your location, you can install the following plugin and use it:
+Enable weather references in narrations:
 
 ```bash
 llm install git+https://github.com/mlang/llm-sky
 llm mpd --tool 'Local("Graz")' --clips-directory openai-speech
 ```
+
+## Contributing
+
+Issues and pull requests are welcome.  
+
+## License
+
+Apache-2.0 – see [LICENSE](LICENSE).
