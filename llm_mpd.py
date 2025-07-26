@@ -8,7 +8,9 @@ from typing import BinaryIO, Generator
 
 from click import command, option
 import ffmpeg # type: ignore
-from llm import get_key, get_model, hookimpl, Attachment, Template
+from llm import (
+    get_default_model, get_key, get_model, hookimpl, Attachment, Template
+)
 from mpd import MPDClient # type: ignore
 from mpd.base import CommandError # type: ignore
 from openai import OpenAI
@@ -64,6 +66,9 @@ Next: $input
 @option('tools', '-T', '--tool', multiple=True,
     help="Tools to make available to the model"
 )
+@option('-m', '--model',
+    help="Use this chat model instead of the default provided in the template"
+)
 @option('--tts-model', default='gpt-4o-mini-tts', show_default=True,
     help="OpenAI TTS model to use"
 )
@@ -82,7 +87,7 @@ Next: $input
     help="Announce every song, not just those with album art"
 )
 def mpd_cmd(*,
-    template, param, tools,
+    template, param, tools, model,
     tts_model, tts_voice, tts_api_key, audio_format,
     mpd_socket, clips_directory,
     always
@@ -98,7 +103,14 @@ def mpd_cmd(*,
         print("Unable to connect to MPD socket, is MPD running?", file=stderr)
         exit(1)
 
+    # NOTE:
+    # Contrary to what the method name suggests, ``mpd.config()`` does **not**
+    # return the full MPD configuration.  When connected via a UNIX-domain
+    # socket it simply yields the *string* value of ``music_directory``.
+    # Over a regular TCP connection the call is unsupported and will raise
+    # an error.  Keep this in mind before refactoring this line.
     music_directory = Path(mpd.config())
+
     clips_directory = Path(clips_directory)
 
     if not (music_directory / clips_directory).is_dir():
@@ -110,14 +122,13 @@ def mpd_cmd(*,
 
     tools = _gather_tools(tools, [])
 
-    model = get_model(template.model)
+    model = get_model(model or template.model or get_default_model())
     if not ({'image/png', 'image/jpeg'} & model.attachment_types):
         print("The choosen model does not support jpeg or png attachments",
             file=stderr
         )
         exit(2)
     conversation = model.conversation(tools=tools)
-
 
     openai = OpenAI(api_key=get_key(tts_api_key, 'openai', 'OPENAI_API_KEY'))
 
