@@ -7,7 +7,7 @@
 ## Features
 - Automatically generated, voice-acted narrations between tracks  
 - Vision support: album-art descriptions incorporated into the script  
-- Works with random mode and adds padding to accomodate for crossfade
+- Works with MPD random mode and adds padding to accommodate crossfade
 - Tool calling (e.g. local weather) for timely shout-outs  
 - Fully configurable through [LLM templates](https://llm.datasette.io/en/stable/templates.html) and CLI flags
 
