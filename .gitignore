@@ -1,7 +1,2 @@
-bin/
-lib/
-lib64
-pyvenv.cfg
-share/
-tracktales.egg-info/
-tracktales/__pycache__/
+build/
+llm_mpd.egg-info/

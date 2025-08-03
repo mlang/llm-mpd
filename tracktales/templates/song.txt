@@ -1,6 +1,0 @@
-Date: {{ date.isoformat(timespec='seconds') }}
-{% if weather %}
-Weather: {{ weather }}
-{% endif %}
-Previous: {{ previous }}
-Next: {{ next }}

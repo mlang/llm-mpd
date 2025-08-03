@@ -1,70 +1,99 @@
-# TrackTales
+# llm-mpd
 
-A narrator for Music Player Daemon (MPD) using the OpenAI APIs.
+> Narrator for Music Player Daemon (MPD)
 
-An AI presenter for your MPD playlist. TrackTales collects data about the currently playing and queued tracks, including album art and embedded pictures, and passes this information to the gpt-4-vision-preview model from OpenAI to generate a track announcement. This announcement is synthesized with the OpenAI TTS API and inserted into the MPD playlist so that the presentation track plays between the current and next track.
+`llm-mpd` collects details about the current and upcoming tracks, sends them to an LLM to craft a spoken introduction, synthesizes the narration with OpenAI TTS, and inserts the resulting audio clip into your MPD playlist so it plays between songs.
 
-Optionally, you can configure the latitude and longitude of your listener's position, and also include celestial events like sunrise and sunset, as well as weather information provided to the model.
-
-## Prerequisites
-
-* An OpenAI API key.
-* Optionally, an OpenWeatherMap API key.
-* Python.
-* FFmpeg.
+## Features
+- Automatically generated, voice-acted narrations between tracks  
+- Vision support: album-art descriptions incorporated into the script  
+- Works with MPD random mode and adds padding to accommodate crossfade
+- Tool calling (e.g. local weather) for timely shout-outs  
+- Fully configurable through [LLM templates](https://llm.datasette.io/en/stable/templates.html) and CLI flags
 
 ## Installation
 
+Prerequisites  
+* Python ≥ 3.9  
+* Running MPD server with write access to its `music_directory`  
+* `ffmpeg` available on your `$PATH`  
+* OpenAI API key (for TTS)
+
 ```bash
-pipx install git+https://github.com/mlang/tracktales
+# Install the core LLM framework
+pipx install llm
+
+# Install this plugin
+llm install git+https://github.com/mlang/llm-mpd
 ```
 
-## Configuration
+## Setup
 
-TrackTales reads its configuration from `~/.config/tracktales/tracktales.cfg`.
-
-Here is a sample:
-
-```
-[DEFAULT]
-clips-directory = openai-speech
-max-prompt-tokens = 7000
-min-remaining-seconds = 100
-personality = nova
-openai-api-key = sk-<REDACTED>
-openweathermap-api-key = <REDACTED>
-station = Radio Mario
-max-tokens = 777
-image-required = no
-language = Austrian German
-location = Graz
-region = Austria
-timezone = Europe/Vienna
-latitude = 47.06
-longitude = 15.45
-elevation = 300
-
-[nova]
-tts-model = tts-1-hd
-voice = nova
-speed = 1.23
-name = Nova
-```
-
-`clips-directory` is a subdirectory of the MPD `music_directory` and needs to be writable by the user who is running TrackTales.
-
-`max-prompt-tokens` is the upper limit of the context.  If a request requires more then this amount of prompt tokens, the context is reset to the system prompt.
-
-If `image-required` is on, tracktales will only generate a track announcements if visual artwork was found. Depending on your music collection, setting this can help to reduce anoyance and costs.
-
-### Advanced
-
-You can also create different personalities by adding a file to `~/.config/tracktales/<NAME>.txt`, which contains a Jinja2 template to generate the initial system prompt. Look at `nova.txt` for inspiration.
+1. Create a writable sub-directory inside your MPD music directory, for example:  
+   ```bash
+   mkdir -p /music/openai-speech
+   chown mpd:mpd /music/openai-speech   # adjust user/group if needed
+   ```
+2. Set your OpenAI key (or pass it with `--tts-api-key`):  
+   ```bash
+   llm keys set openai
+   ```
 
 ## Usage
 
-Since TrackTales needs to place files in the MPD `music_directory`, it currently needs to be run on the same machine where MPD is running. This could theoretically be extended to support copying the files to a remote machine before performing an MPD update. However, for simplicity's sake, this isn't implemented yet.
+Start the narrator:
 
-Also, you should be aware that using TrackTales for prolonged periods of time can generate non-trivial costs. Depending on how much album art your music collection contains, an hour of usage can cost around $1.
+```bash
+llm mpd --clips-directory openai-speech
+```
 
-To start generating track announcements, simply launch the `tracktales` executable.
+Common options:
+
+| Flag | Default | Purpose |
+|------|---------|---------|
+| `--template` | `mpd:default` | Select an LLM template |
+| `--param KEY VALUE` | – | Override template variables |
+| `--tool` | – | Expose an LLM tool (e.g. weather) |
+| `--tts-model` | `gpt-4o-mini-tts` | OpenAI TTS model |
+| `--always` | off | Announce every song, not just those with art |
+
+Run `llm mpd --help` for the full list.
+
+## Customisation
+
+Templates live in the LLM template system.  
+The bundled `mpd:default` template supports:
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `name`    | Nova    | On-air persona |
+| `station` | Radio Mario | Station name |
+| `location`| Graz    | Listener city |
+| `region`  | Austria | Listener region |
+| `language`| Austrian German | Language to speak |
+
+Override any of these:
+
+```bash
+llm mpd \
+  --clips-directory openai-speech \
+  --param name DJ-Wanda \
+  --param language "Canadian French"
+```
+
+## Suggested Plugins
+
+Enable weather references in narrations:
+
+```bash
+llm install git+https://github.com/mlang/llm-sky
+llm mpd --tool 'Local("Graz")' --clips-directory openai-speech
+```
+
+## Contributing
+
+Issues and pull requests are welcome.  
+
+## License
+
+Apache-2.0 – see [LICENSE](LICENSE).

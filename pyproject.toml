@@ -1,0 +1,14 @@
+[project]
+name = "llm-mpd"
+version = "0.1"
+description = "A LLM presenter for Music Player Daemon"
+readme = "README.md"
+license = "Apache-2.0"
+dependencies = [ "llm", "python-mpd2" ]
+
+[[project.authors]]
+name = "Mario Lang"
+email = "mlang@blind.guru"
+
+[project.entry-points.llm]
+llm_mpd = "llm_mpd"
